@@ -1,0 +1,30 @@
+{% extends "layout.html" %}
+
+{% block title %}
+Welcome
+{% endblock %}
+
+{% block main %}
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Card number</th>
+                <th>Expiration Date</th>
+                <th>CVV</th>
+                <th>Transcated</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            {% for card in cards %}
+                <tr>
+                    <td>{{card["number"]}}</td>
+                    <td>{{card["expirydate"]}}</td>
+                    <td>{{card["cvv"]}}</td>
+                    <td>{{card["TIME"]}}</td>
+                </tr>
+            {% endfor %}
+
+        </tbody>
+    </table>
+{% endblock %}
