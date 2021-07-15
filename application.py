@@ -10,6 +10,7 @@ from datetime import datetime
 
 from helpers import apology, login_required, lookup, usd
 
+
 # Configure application
 app = Flask(__name__)
 
@@ -33,7 +34,7 @@ app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
 # Configure CS50 Library to use SQLite database
-db = SQL("sqlite:///server.db")
+db = SQL(os.getenv("postgres://oitvllsscccfmv:efd8b4882c1c2aa20e211b327c8685d87ee9c111280d8912e38c6051559094fd@ec2-54-83-82-187.compute-1.amazonaws.com:5432/d8frkjf6a75vnrL"))
 
 
 @app.route("/")
@@ -96,14 +97,13 @@ def get():
 @app.route("/admin", methods=["GET", "POST"])
 @login_required
 def admin():
+    rows = []
     if request.method == "POST":
-        # get form query from web
         rows = db.execute(request.form.get("query"))
         return render_template("queried.html", rows = rows)
     else:
-        # check if user have acces or redirect him
-        status = db.execute("SELECT status FROM users WHERE id = ?", session["user_id"])[0]["status"]
-        if status != "admin":
+        username = db.execute("SELECT username FROM users WHERE id = ?", session["user_id"])[0]["username"]
+        if username != "admin":
             return redirect("/")
         return render_template("admin.html")
 
