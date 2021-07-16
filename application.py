@@ -44,8 +44,11 @@ db = mydb.cursor()
 
 
 @app.route("/")
-@login_required
 def index():
+    #login required
+    if session.get("user_id") is None:
+        return redirect("/login")
+
     #get all stocks properties
     db.execute("SELECT * from cards WHERE usage= " + str(session["user_id"]))
     cards = db.fetchall()
@@ -58,9 +61,10 @@ def index():
 
 
 @app.route("/get", methods=["GET", "POST"])
-@login_required
 def get():
-
+    #login required
+    if session.get("user_id") is None:
+        return redirect("/login")
     if request.method == "POST":
         # Check the validity of the service
         if not request.form.get("service"):
@@ -158,8 +162,11 @@ def logout():
     return redirect("/")
 
 @app.route("/changepassword", methods=["GET", "POST"])
-@login_required
 def changepassword():
+    #login required
+    if session.get("user_id") is None:
+        return redirect("/login")
+
     if request.method == "POST":
 
         # Ensure password was submitted
