@@ -120,6 +120,7 @@ def get():
         return redirect("/")
 
     else:
+        mydb.commit()
         return render_template("get.html")
 
 
