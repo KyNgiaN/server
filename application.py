@@ -200,7 +200,7 @@ def register():
             return apology("must provide username")
 
         # Ensure username wasn't taken
-        db.execute("SELECT * FROM users WHERE username = %s", request.form.get("username"))
+        db.execute("SELECT * FROM users WHERE username = %s", (request.form.get("username")))
         if db.fetchall():
             return apology("username taken")
 
@@ -230,7 +230,7 @@ def register():
         mydb.commit()
 
         # Query database for information with username
-        db.execute("SELECT * FROM users WHERE username = %s", request.form.get("username"))
+        db.execute("SELECT * FROM users WHERE username = %s", (request.form.get("username")))
         rows = db.fetchall()
 
         # Remember which user has logged in
