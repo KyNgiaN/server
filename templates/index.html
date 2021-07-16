@@ -11,6 +11,7 @@ Welcome
                 <th>Card number</th>
                 <th>Expiration Date</th>
                 <th>CVV</th>
+                <th>Service</th>
                 <th>Transcated</th>
             </tr>
         </thead>
@@ -18,10 +19,13 @@ Welcome
 
             {% for card in cards %}
                 <tr>
-                    <td>{{card["number"]}}</td>
-                    <td>{{card["expirydate"]}}</td>
-                    <td>{{card["cvv"]}}</td>
-                    <td>{{card["TIME"]}}</td>
+                    <td>{{card[0]}}</td>
+                    <td>{{card[1]}}</td>
+                    <td>{{card[2]}}</td>
+                    <td>{{card[5]}}</td>
+                    <td>{{card[4]}}</td>
+
+
                 </tr>
             {% endfor %}
 

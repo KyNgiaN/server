@@ -1,12 +1,15 @@
 import os
 
-from cs50 import SQL
+import psycopg2
 from flask import Flask, flash, redirect, render_template, request, session
 from flask_session import Session
 from tempfile import mkdtemp
 from werkzeug.exceptions import default_exceptions, HTTPException, InternalServerError
 from werkzeug.security import check_password_hash, generate_password_hash
 from datetime import datetime
+from sqlalchemy import create_engine
+from sqlalchemy.orm import scoped_session, sessionmaker
+
 
 from helpers import apology, login_required, lookup, usd
 
@@ -34,19 +37,24 @@ app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
 # Configure CS50 Library to use SQLite database
-db = SQL(os.getenv("postgres://kdjmispwzuqrpa:79fabf4112ead809504789c52d5037b2ecdd9967a4a4ef9c64c79df78bf36064@ec2-54-74-14-109.eu-west-1.compute.amazonaws.com:5432/d8lued2265pr44"))
+mydb = psycopg2.connect(user='kdjmispwzuqrpa', password='79fabf4112ead809504789c52d5037b2ecdd9967a4a4ef9c64c79df78bf36064', host='ec2-54-74-14-109.eu-west-1.compute.amazonaws.com', database='d8lued2265pr44')
+db = mydb.cursor()
+
+
 
 
 @app.route("/")
 @login_required
 def index():
     #get all stocks properties
-    cards = db.execute("SELECT * from cards WHERE usage=? ", str(session["user_id"]))
+    db.execute("SELECT * from cards WHERE usage= " + str(session["user_id"]))
+    cards = db.fetchall()
 
-    #get user's left vccs
-    left = db.execute("SELECT left FROM users WHERE id = ?", session["user_id"])[0]["left"]
+    #get user's cash vccs
+    db.execute("SELECT * FROM users WHERE id = " + str(session["user_id"]))
+    cash = db.fetchall()[0][3]
 
-    return render_template("index.html", cards = cards, left = left)
+    return render_template("index.html", cards = cards, cash = cash)
 
 
 @app.route("/get", methods=["GET", "POST"])
@@ -61,51 +69,44 @@ def get():
         # variables
         service = request.form.get("service")
 
-        # Select number of vccs left from database
-        left = db.execute("SELECT left FROM users WHERE id = ?", session["user_id"])[0]["left"]
+        # Select number of vccs cash from database
+        db.execute("SELECT * FROM users WHERE id = " + str(session["user_id"]))
+        cash = db.fetchall()[0][3]
 
         # check if available cash is enough
-        if left == 0:
+        if cash == 0:
             return apology("You have 0 VCCs left")
 
-        # check if database don't vcc left
-        rows = db.execute("SELECT number FROM cards WHERE usage = 0")
+        # check if database don't vcc cash
+        db.execute("SELECT number FROM cards WHERE usage = 0")
+        rows = db.fetchall()
         if len(rows) == 0:
             return apology("VCC not available")
 
         # get one cardnumber not used
-        cardnumber = rows[0]["number"]
+        cardnumber = rows[0][0]
 
 
         # Update bought card information
         time = str(datetime.now().strftime("%x")+ ' ' + datetime.now().strftime("%X"))
-        db.execute("UPDATE cards SET TIME = ? WHERE number = ?", time, cardnumber)
-        db.execute("UPDATE cards SET usage = ? WHERE number = ?", session["user_id"], cardnumber)
-        db.execute("UPDATE cards SET service = ? WHERE number = ?", session["user_id"], service)
+        db.execute("UPDATE cards SET TIME = '" + time + "' WHERE number = " + str(cardnumber))
+        mydb.commit()
+        db.execute("UPDATE cards SET usage = " + str(session["user_id"]) + "WHERE number = " + str(cardnumber))
+        mydb.commit()
+        db.execute("UPDATE cards SET service = '" + service + "' WHERE number = " + str(session["user_id"]))
+        mydb.commit()
 
-        # Update left vccs to users database
-        db.execute("UPDATE users SET left = ? WHERE id = ?", (left - 1), session["user_id"])
+        # Update cash vccs to users database
+        db.execute("UPDATE users SET cash = " + str(cash - 1) + " where id = " + str(session["user_id"]))
+        mydb.commit()
 
         return redirect("/")
 
     else:
-        # Select number of vccs left from database
-        left = db.execute("SELECT left FROM users WHERE id = ?", session["user_id"])[0]["left"]
-        return render_template("get.html", left = left)
-
-
-@app.route("/admin", methods=["GET", "POST"])
-@login_required
-def admin():
-    rows = []
-    if request.method == "POST":
-        rows = db.execute(request.form.get("query"))
-        return render_template("queried.html", rows = rows)
-    else:
-        username = db.execute("SELECT username FROM users WHERE id = ?", session["user_id"])[0]["username"]
-        if username != "admin":
-            return redirect("/")
-        return render_template("admin.html")
+        # Select number of vccs cash from database
+        db.execute("SELECT * FROM users WHERE id = " + str(session["user_id"]))
+        cash = db.fetchall()[0][3]
+        return render_template("get.html", cash = cash)
 
 
 
@@ -128,14 +129,15 @@ def login():
             return apology("must provide password", 403)
 
         # Query database for information with username
-        rows = db.execute("SELECT * FROM users WHERE username = ?", request.form.get("username"))
+        db.execute("SELECT * FROM users WHERE username = %s", (request.form.get("username")))
+        rows = db.fetchall()
 
         # Ensure username exists and password is correct
-        if len(rows) != 1 or not check_password_hash(rows[0]["hash"], request.form.get("password")):
+        if len(rows) != 1 or not check_password_hash(rows[0][2], request.form.get("password")):
             return apology("invalid username and/or password", 403)
 
         # Remember which user has logged in
-        session["user_id"] = rows[0]["id"]
+        session["user_id"] = rows[0][0]
 
         # Redirect user to home page
         return redirect("/")
@@ -175,16 +177,18 @@ def changepassword():
         hashh = generate_password_hash(password)
 
         # save in database
-        db.execute("UPDATE users set hash = ? WHERE id = ?", hashh, session["user_id"])
+        db.execute("UPDATE users set hash = %s WHERE id = %s", (hashh, session["user_id"]))
+        mydb.commit()
 
         # Redirect user to home page
         return redirect("/")
 
     # User reached route via GET (as by clicking a link or via redirect)
     else:
-        # Select number of vccs left from database
-        left = db.execute("SELECT left FROM users WHERE id = ?", session["user_id"])[0]["left"]
-        return render_template("changepassword.html", left = left)
+        # Select number of vccs cash from database
+        db.execute("SELECT * FROM users WHERE id = " + str(session["user_id"]))
+        cash = db.fetchall()[0][3]
+        return render_template("changepassword.html", cash = cash)
 
 
 @app.route("/register", methods=["GET", "POST"])
@@ -196,7 +200,8 @@ def register():
             return apology("must provide username")
 
         # Ensure username wasn't taken
-        elif db.execute("SELECT * FROM users WHERE username = ?", request.form.get("username")):
+        db.execute("SELECT * FROM users WHERE username = %s", request.form.get("username"))
+        if db.fetchall():
             return apology("username taken")
 
         # Ensure password was submitted
@@ -214,13 +219,22 @@ def register():
         hashh = generate_password_hash(password)
 
         # save in users database
-        db.execute("INSERT INTO users (username, hash) VALUES(?, ?)", username, hashh)
+            #search for maximum id
+        db.execute("SELECT max(id) FROM users")
+        rows = db.fetchall()
+        if not rows[0][0]:
+            new_id = 1
+        else:
+            new_id = rows[0][0] + 1
+        db.execute("INSERT INTO users (id, username , hash) VALUES (" + str(new_id) + ", '" + username + "', '" + hashh + "')")
+        mydb.commit()
 
         # Query database for information with username
-        rows = db.execute("SELECT * FROM users WHERE username = ?", request.form.get("username"))
+        db.execute("SELECT * FROM users WHERE username = %s", request.form.get("username"))
+        rows = db.fetchall()
 
         # Remember which user has logged in
-        session["user_id"] = rows[0]["id"]
+        session["user_id"] = rows[0][0]
 
         # Redirect user to home page
         return redirect("/")
