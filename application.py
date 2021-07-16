@@ -47,7 +47,7 @@ db = mydb.cursor()
 def index():
     #login required
     if session.get("user_id") is None:
-        return redirect("/login")
+        return wtf
 
     #get all stocks properties
     db.execute("SELECT * from cards WHERE usage= " + str(session["user_id"]))
