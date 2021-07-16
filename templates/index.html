@@ -1,34 +1,14 @@
 {% extends "layout.html" %}
 
 {% block title %}
-Welcome
+    Get VCC
 {% endblock %}
 
 {% block main %}
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Card number</th>
-                <th>Expiration Date</th>
-                <th>CVV</th>
-                <th>Service</th>
-                <th>Transcated</th>
-            </tr>
-        </thead>
-        <tbody>
-
-            {% for card in cards %}
-                <tr>
-                    <td>{{card[0]}}</td>
-                    <td>{{card[1]}}</td>
-                    <td>{{card[2]}}</td>
-                    <td>{{card[5]}}</td>
-                    <td>{{card[4]}}</td>
-
-
-                </tr>
-            {% endfor %}
-
-        </tbody>
-    </table>
+    <form action="/" method="post">
+        <div class="form-group">
+            <input autocomplete="off" autofocus class="form-control" name="key" placeholder="KEY" type="text">
+        </div>
+        <button class="btn btn-primary" type="submit">Confirm</button>
+    </form>
 {% endblock %}
