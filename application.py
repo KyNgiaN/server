@@ -51,7 +51,7 @@ def index():
         # info about vccs lelft
             # Select number of vccs cash from database
         key = request.form.get("key")
-        db.execute("SELECT * FROM users WHERE username = %s", key)
+        db.execute("SELECT * FROM users WHERE username = %s", (key,))
         rows = db.fetchall()
         if len(rows) == 0:
             return apology("Invalid key")
@@ -59,7 +59,7 @@ def index():
 
         # info about cards
             #get all stocks properties
-        db.execute("SELECT * from cards WHERE usage = %s", key)
+        db.execute("SELECT * from cards WHERE usage = %s", (key,))
         cards = db.fetchall()
 
 
@@ -83,7 +83,7 @@ def get():
         key = request.form.get("key")
 
         # Select number of vccs cash from database
-        db.execute("SELECT * FROM users WHERE username = %s", key)
+        db.execute("SELECT * FROM users WHERE username = %s", (key,))
         rows = db.fetchall()
         if len(rows) == 0:
             return apology("Invalid key")
@@ -114,7 +114,7 @@ def get():
         mydb.commit()
 
         # Update cash vccs to users database
-        db.execute("UPDATE users SET cash = " + str(cash - 1) + " where username = %s", key)
+        db.execute("UPDATE users SET cash = " + str(cash - 1) + " where username = %s", (key,))
         mydb.commit()
 
         return redirect("/")
